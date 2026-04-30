@@ -372,6 +372,13 @@ class __SheetRouteContainerState extends State<_SheetRouteContainer>
 
   bool _userGestureInProgress = false;
 
+  bool get _isFullyDismissed {
+    if (!_sheetController.hasClients) {
+      return false;
+    }
+    return _sheetController.animation.value == 0;
+  }
+
   void _startUserGesture() {
     if (_userGestureInProgress) {
       return;
@@ -414,7 +421,9 @@ class __SheetRouteContainerState extends State<_SheetRouteContainer>
     final bool isScrolling =
         _sheetController.position.isScrollingNotifier.value;
     if (!isScrolling) {
-      _stopUserGesture();
+      if (!_isFullyDismissed) {
+        _stopUserGesture();
+      }
       return;
     }
 
@@ -472,6 +481,19 @@ class __SheetRouteContainerState extends State<_SheetRouteContainer>
         preventPop();
         return;
       }
+
+      if (route.isCurrent &&
+          !_firstAnimation &&
+          _sheetController.position.userScrollDirection ==
+              ScrollDirection.forward &&
+          _sheetController.animation.value < route.initialExtent) {
+        _startUserGesture();
+      } else {
+        if (!_isFullyDismissed) {
+          _stopUserGesture();
+        }
+      }
+
       if (!_routeController.isAnimating) {
         final double animationValue =
             _sheetController.animation.value.mapDistance(
@@ -482,6 +504,7 @@ class __SheetRouteContainerState extends State<_SheetRouteContainer>
         );
         _routeController.value = animationValue;
         if (_sheetController.animation.value == 0) {
+          _startUserGesture();
           _routeController.value = 0.001;
           _routeController.animateBack(0);
           route.navigator?.pop();
