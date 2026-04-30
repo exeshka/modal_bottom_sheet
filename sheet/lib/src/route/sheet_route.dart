@@ -369,11 +369,70 @@ class __SheetRouteContainerState extends State<_SheetRouteContainer>
   SheetController get _sheetController => widget.sheetRoute._sheetController;
   AnimationController get _routeController =>
       widget.sheetRoute._routeAnimationController!;
+
+  bool _userGestureInProgress = false;
+
+  void _startUserGesture() {
+    if (_userGestureInProgress) {
+      return;
+    }
+    final NavigatorState? navigator = route.navigator;
+    if (navigator == null) {
+      return;
+    }
+    _userGestureInProgress = true;
+    navigator.userGestureInProgressNotifier.value = true;
+    navigator.didStartUserGesture();
+  }
+
+  void _stopUserGesture() {
+    if (!_userGestureInProgress) {
+      return;
+    }
+    final NavigatorState? navigator = route.navigator;
+    if (navigator == null) {
+      _userGestureInProgress = false;
+      return;
+    }
+    _userGestureInProgress = false;
+    navigator.userGestureInProgressNotifier.value = false;
+    navigator.didStopUserGesture();
+  }
+
+  void _onSheetIsScrollingChanged() {
+    if (!mounted) {
+      return;
+    }
+    if (!_sheetController.hasClients) {
+      return;
+    }
+    if (_firstAnimation || !route.isCurrent) {
+      _stopUserGesture();
+      return;
+    }
+
+    final bool isScrolling =
+        _sheetController.position.isScrollingNotifier.value;
+    if (!isScrolling) {
+      _stopUserGesture();
+      return;
+    }
+
+    if (_sheetController.position.userScrollDirection ==
+        ScrollDirection.forward) {
+      _startUserGesture();
+    }
+  }
+
   @override
   void initState() {
     _routeController.addListener(onRouteAnimationUpdate);
     _sheetController.addListener(onSheetExtentUpdate);
     WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) {
+      if (_sheetController.hasClients) {
+        _sheetController.position.isScrollingNotifier
+            .addListener(_onSheetIsScrollingChanged);
+      }
       _sheetController
           .relativeAnimateTo(
         route.initialExtent,
@@ -392,8 +451,13 @@ class __SheetRouteContainerState extends State<_SheetRouteContainer>
 
   @override
   void dispose() {
-    _routeController.addListener(onRouteAnimationUpdate);
+    _routeController.removeListener(onRouteAnimationUpdate);
     _sheetController.removeListener(onSheetExtentUpdate);
+    if (_sheetController.hasClients) {
+      _sheetController.position.isScrollingNotifier
+          .removeListener(_onSheetIsScrollingChanged);
+    }
+    _stopUserGesture();
     super.dispose();
   }
 

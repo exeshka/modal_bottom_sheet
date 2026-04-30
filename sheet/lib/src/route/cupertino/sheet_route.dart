@@ -8,7 +8,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:meta/meta.dart';
 import 'package:sheet/route.dart';
 import 'package:sheet/sheet.dart';
 
@@ -17,7 +16,7 @@ import 'package:sheet/sheet.dart';
 const double _kPreviousRouteVisibleOffset = 10.0;
 
 /// Value extracted from the official sketch iOS UI kit
-const Radius _kCupertinoSheetTopRadius = Radius.circular(10.0);
+const Radius _kCupertinoSheetTopRadius = Radius.circular(32);
 
 /// Estimated Round corners for iPhone X, XR, 11, 11 Pro
 /// https://kylebashour.com/posts/finding-the-real-iphone-x-corner-radius
@@ -70,8 +69,8 @@ class _CupertinoSheetDecorationBuilder extends StatelessWidget {
             clipBehavior: Clip.hardEdge,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.vertical(top: topRadius),
-              color: backgroundColor ??
-                  CupertinoColors.systemBackground.resolveFrom(context),
+              // color: backgroundColor ??
+              //     CupertinoColors.systemBackground.resolveFrom(context),
             ),
             child: MediaQuery.removePadding(
               context: context,
@@ -328,6 +327,9 @@ class CupertinoSheetPage<T> extends Page<T> {
 
   /// {@macro flutter.widgets.modalRoute.maintainState}
   final bool maintainState;
+
+  // 👇 Добавь это
+  Widget get content => child;
 
   @override
   Route<T> createRoute(BuildContext context) {

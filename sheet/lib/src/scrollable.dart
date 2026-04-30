@@ -416,7 +416,9 @@ class SheetState extends State<SheetScrollable>
         oldWidget.scrollBehavior?.getScrollPhysics(context);
     do {
       if (newPhysics?.runtimeType != oldPhysics?.runtimeType ||
-          _shouldSheetPhysicsUpdate(newPhysics, oldPhysics)) return true;
+          _shouldSheetPhysicsUpdate(newPhysics, oldPhysics)) {
+        return true;
+      }
       newPhysics = newPhysics?.parent;
       oldPhysics = oldPhysics?.parent;
     } while (newPhysics != null || oldPhysics != null);
@@ -507,7 +509,9 @@ class SheetState extends State<SheetScrollable>
   @protected
   void setCanDrag(bool canDrag) {
     if (canDrag == _lastCanDrag &&
-        (!canDrag || widget.axis == _lastAxisDirection)) return;
+        (!canDrag || widget.axis == _lastAxisDirection)) {
+      return;
+    }
     if (!canDrag) {
       _gestureRecognizers = const <Type, GestureRecognizerFactory>{};
       // Cancel the active hold/drag (if any) because the gesture recognizers
