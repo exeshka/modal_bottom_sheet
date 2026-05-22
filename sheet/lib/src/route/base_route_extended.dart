@@ -42,6 +42,26 @@ class MaterialExtendedPage<T> extends Page<T> {
   /// {@macro flutter.widgets.PageRoute.fullscreenDialog}
   final bool fullscreenDialog;
 
+  MaterialExtendedPage<T> copyWith({
+    Widget? child,
+    bool? maintainState,
+    bool? fullscreenDialog,
+    LocalKey? key,
+    String? name,
+    Object? arguments,
+    String? restorationId,
+  }) {
+    return MaterialExtendedPage<T>(
+      child: child ?? this.child,
+      maintainState: maintainState ?? this.maintainState,
+      fullscreenDialog: fullscreenDialog ?? this.fullscreenDialog,
+      key: key ?? this.key,
+      name: name ?? this.name,
+      arguments: arguments ?? this.arguments,
+      restorationId: restorationId ?? this.restorationId,
+    );
+  }
+
   @override
   Route<T> createRoute(BuildContext context) {
     return _PageBasedMaterialPageRoute<T>(page: this);
@@ -112,6 +132,28 @@ class CupertinoExtendedPage<T> extends Page<T> {
 
   /// {@macro flutter.widgets.PageRoute.fullscreenDialog}
   final bool fullscreenDialog;
+
+  CupertinoExtendedPage<T> copyWith({
+    Widget? child,
+    bool? maintainState,
+    String? title,
+    bool? fullscreenDialog,
+    LocalKey? key,
+    String? name,
+    Object? arguments,
+    String? restorationId,
+  }) {
+    return CupertinoExtendedPage<T>(
+      child: child ?? this.child,
+      maintainState: maintainState ?? this.maintainState,
+      title: title ?? this.title,
+      fullscreenDialog: fullscreenDialog ?? this.fullscreenDialog,
+      key: key ?? this.key,
+      name: name ?? this.name,
+      arguments: arguments ?? this.arguments,
+      restorationId: restorationId ?? this.restorationId,
+    );
+  }
 
   @override
   Route<T> createRoute(BuildContext context) {

@@ -328,8 +328,21 @@ class CupertinoSheetPage<T> extends Page<T> {
   /// {@macro flutter.widgets.modalRoute.maintainState}
   final bool maintainState;
 
-  // 👇 Добавь это
-  Widget get content => child;
+  CupertinoSheetPage<T> copyWith({
+    Widget? child,
+    bool? maintainState,
+    LocalKey? key,
+    String? name,
+    Object? arguments,
+  }) {
+    return CupertinoSheetPage<T>(
+      child: child ?? this.child,
+      maintainState: maintainState ?? this.maintainState,
+      key: key ?? this.key,
+      name: name ?? this.name,
+      arguments: arguments ?? this.arguments,
+    );
+  }
 
   @override
   Route<T> createRoute(BuildContext context) {
