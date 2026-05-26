@@ -371,6 +371,7 @@ class __SheetRouteContainerState extends State<_SheetRouteContainer>
       widget.sheetRoute._routeAnimationController!;
 
   bool _userGestureInProgress = false;
+  bool _isDisposed = false;
 
   bool get _isFullyDismissed {
     if (!_sheetController.hasClients) {
@@ -402,8 +403,15 @@ class __SheetRouteContainerState extends State<_SheetRouteContainer>
       return;
     }
     _userGestureInProgress = false;
-    navigator.userGestureInProgressNotifier.value = false;
-    navigator.didStopUserGesture();
+    if (!_isDisposed) {
+      navigator.userGestureInProgressNotifier.value = false;
+      navigator.didStopUserGesture();
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        navigator.userGestureInProgressNotifier.value = false;
+        navigator.didStopUserGesture();
+      });
+    }
   }
 
   void _onSheetIsScrollingChanged() {
@@ -460,6 +468,7 @@ class __SheetRouteContainerState extends State<_SheetRouteContainer>
 
   @override
   void dispose() {
+    _isDisposed = true;
     _routeController.removeListener(onRouteAnimationUpdate);
     _sheetController.removeListener(onSheetExtentUpdate);
     if (_sheetController.hasClients) {

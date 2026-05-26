@@ -37,6 +37,17 @@ class AlwaysDraggableSheetPhysics extends AlwaysScrollableScrollPhysics
   }
 }
 
+SnapSheetPhysics? _findSnapSheetPhysics(ScrollPhysics? physics) {
+  ScrollPhysics? current = physics;
+  while (current != null) {
+    if (current is SnapSheetPhysics) {
+      return current;
+    }
+    current = current.parent;
+  }
+  return null;
+}
+
 /// Creates sheet physics that bounce back from the edge.
 class BouncingSheetPhysics extends ScrollPhysics with SheetPhysics {
   /// Creates sheet physics that bounce back from the edge.
@@ -139,9 +150,16 @@ class BouncingSheetPhysics extends ScrollPhysics with SheetPhysics {
       }
       return true;
     }());
+    final SnapSheetPhysics? snapPhysics = _findSnapSheetPhysics(this);
+    final double maxStop = snapPhysics?.stops.reduce(math.max) ?? 1.0;
+    final double effectiveMaxScrollExtent = maxStop * position.maxScrollExtent;
+
     // Prevent scrolling beyond the maximum position
-    if (value > position.maxScrollExtent) {
-      return value - position.maxScrollExtent;
+    if (value > effectiveMaxScrollExtent) {
+      if (value > position.pixels) {
+        return value - math.max(position.pixels, effectiveMaxScrollExtent);
+      }
+      return 0.0;
     }
     if (!overflowViewport) {
       // overscroll
@@ -161,9 +179,9 @@ class BouncingSheetPhysics extends ScrollPhysics with SheetPhysics {
       return value - position.pixels;
     }
     // hit bottom edge
-    if (position.pixels < position.maxScrollExtent &&
-        position.maxScrollExtent < value) {
-      return value - position.maxScrollExtent;
+    if (position.pixels < effectiveMaxScrollExtent &&
+        effectiveMaxScrollExtent < value) {
+      return value - effectiveMaxScrollExtent;
     }
     return 0.0;
   }
@@ -234,12 +252,16 @@ class NoMomentumSheetPhysics extends ScrollPhysics with SheetPhysics {
 
   @override
   double applyBoundaryConditions(ScrollMetrics position, double value) {
+    final SnapSheetPhysics? snapPhysics = _findSnapSheetPhysics(this);
+    final double maxStop = snapPhysics?.stops.reduce(math.max) ?? 1.0;
+    final double effectiveMaxScrollExtent = maxStop * position.maxScrollExtent;
+
     // underscroll
     if (value < position.pixels &&
         position.pixels <= position.minScrollExtent) {
       return value - position.pixels;
     }
-    if (position.maxScrollExtent <= position.pixels &&
+    if (effectiveMaxScrollExtent <= position.pixels &&
         position.pixels < value) {
       // overscroll
       return value - position.pixels;
@@ -249,10 +271,10 @@ class NoMomentumSheetPhysics extends ScrollPhysics with SheetPhysics {
       // hit top edge
       return value - position.minScrollExtent;
     }
-    if (position.pixels < position.maxScrollExtent &&
-        position.maxScrollExtent < value) {
+    if (position.pixels < effectiveMaxScrollExtent &&
+        effectiveMaxScrollExtent < value) {
       // hit bottom edge
-      return value - position.maxScrollExtent;
+      return value - effectiveMaxScrollExtent;
     }
     return 0.0;
 
@@ -435,9 +457,9 @@ class SnapSheetPhysics extends ScrollPhysics with SheetPhysics {
     final double targetPixels =
         getPixelsFromPage(position, page.clamp(0, stops.length - 1));
 
-    if (targetPixels > position.pixels && velocity < -tolerance.velocity) {
+    if (targetPixels >= position.pixels && velocity < -tolerance.velocity) {
       page -= 1;
-    } else if (targetPixels < position.pixels &&
+    } else if (targetPixels <= position.pixels &&
         velocity > tolerance.velocity) {
       page += 1;
     }

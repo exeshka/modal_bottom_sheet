@@ -66,7 +66,7 @@ class _CupertinoSheetDecorationBuilder extends StatelessWidget {
       child: Builder(
         builder: (BuildContext context) {
           return Container(
-            clipBehavior: Clip.hardEdge,
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.vertical(top: topRadius),
               // color: backgroundColor ??

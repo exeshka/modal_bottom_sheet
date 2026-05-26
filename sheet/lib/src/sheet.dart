@@ -472,22 +472,23 @@ class SheetPosition extends ScrollPositionWithSingleContext {
 
   @override
   double setPixels(double newPixels) {
+    final double result = super.setPixels(newPixels);
     _controller.value = relativeOffsetFromPixels(
-      newPixels,
+      pixels,
       minScrollExtent,
       maxScrollExtent,
     );
-    return super.setPixels(newPixels);
+    return result;
   }
 
   @override
   void forcePixels(double value) {
+    super.forcePixels(value);
     _controller.value = relativeOffsetFromPixels(
-      value,
+      pixels,
       minScrollExtent,
       maxScrollExtent,
     );
-    super.forcePixels(value);
   }
 
   @override

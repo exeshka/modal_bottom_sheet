@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 import 'package:sheet/sheet.dart';
 
@@ -84,9 +85,23 @@ class SheetPrimaryScrollPosition extends ScrollPositionWithSingleContext {
     // Can drag down if list already on the top
     final bool canDragForward = delta >= 0 && pixels <= minScrollExtent;
 
+    // Find if SnapSheetPhysics is present in the sheet's physics chain to determine the effective max stop
+    ScrollPhysics? currentPhysics = sheetPosition.physics;
+    double maxStop = 1.0;
+    while (currentPhysics != null) {
+      if (currentPhysics is SnapSheetPhysics) {
+        maxStop = currentPhysics.stops.reduce(math.max);
+        break;
+      }
+      currentPhysics = currentPhysics.parent;
+    }
+    final double effectiveMaxScrollExtent = sheetPosition.hasContentDimensions
+        ? maxStop * sheetPosition.maxScrollExtent
+        : 0.0;
+
     // Can drag up if sheet is not yet on top and list is already on top
     final bool canDragBackwards = delta < 0 &&
-        sheetPosition.pixels < sheetPosition.maxScrollExtent &&
+        sheetPosition.pixels < effectiveMaxScrollExtent &&
         pixels <= minScrollExtent;
 
     return sheetPosition.physics.shouldAcceptUserOffset(sheetPosition) &&
@@ -107,6 +122,23 @@ class SheetPrimaryScrollPosition extends ScrollPositionWithSingleContext {
       sheetPosition.applyUserOffset(sheetDelta);
       return;
     } else {
+      // If we are dragging down to scroll the list back to top, and the drag
+      // offset is larger than the distance to minScrollExtent, we can split
+      // the delta: scroll the list exactly to top, and apply the remaining
+      // delta to the outer sheet in the same frame!
+      if (delta > 0 && pixels > minScrollExtent) {
+        final double overflow = delta - (pixels - minScrollExtent);
+        if (overflow > 0) {
+          super.applyUserOffset(pixels - minScrollExtent);
+          if (sheetPosition.activity is! _SheetScrollActivity) {
+            sheetPosition.beginActivity(_SheetScrollActivity(sheetPosition));
+          }
+          final double sheetDelta = sheetPosition.physics
+              .applyPhysicsToUserOffset(sheetPosition, overflow);
+          sheetPosition.applyUserOffset(sheetDelta);
+          return;
+        }
+      }
       super.applyUserOffset(delta);
       if (sheetPosition.activity is! HoldScrollActivity) {
         sheetPosition.hold(() {});
@@ -123,15 +155,31 @@ class SheetPrimaryScrollPosition extends ScrollPositionWithSingleContext {
 
     if (sheetPosition.hasContentDimensions) {
       if (sheetContext.initialAnimationFinished) {
-        sheetPosition.goBallistic(velocity);
+        if ((activity is DragScrollActivity ||
+                activity is HoldScrollActivity) &&
+            sheetPosition.activity is _SheetScrollActivity) {
+          sheetPosition.goBallistic(velocity);
+        }
       } else {
         goIdle();
         return;
       }
     }
 
-    if (velocity > 0.0 &&
-            sheetPosition.pixels >= sheetPosition.maxScrollExtent ||
+    ScrollPhysics? currentPhysics = sheetPosition.physics;
+    double maxStop = 1.0;
+    while (currentPhysics != null) {
+      if (currentPhysics is SnapSheetPhysics) {
+        maxStop = currentPhysics.stops.reduce(math.max);
+        break;
+      }
+      currentPhysics = currentPhysics.parent;
+    }
+    final double effectiveMaxScrollExtent = sheetPosition.hasContentDimensions
+        ? maxStop * sheetPosition.maxScrollExtent
+        : 0.0;
+
+    if (velocity > 0.0 && sheetPosition.pixels >= effectiveMaxScrollExtent ||
         (velocity < 0.0 && pixels > 0)) {
       super.goBallistic(velocity);
       return;

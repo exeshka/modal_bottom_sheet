@@ -341,7 +341,7 @@ class SheetState extends State<SheetScrollable>
       widget.controller ?? _fallbackScrollController!;
 
   // Only call this from places that will definitely trigger a rebuild.
-  void _updatePosition() {
+  void _updatePosition({bool force = false}) {
     _configuration = widget.scrollBehavior ?? SheetBehavior();
     _physics = _configuration.getScrollPhysics(context);
     if (widget.physics != null) {
@@ -352,6 +352,11 @@ class SheetState extends State<SheetScrollable>
     }
     final ScrollPosition? oldPosition = _position;
     if (oldPosition != null) {
+      if (!force &&
+          oldPosition.physics.runtimeType == _physics!.runtimeType &&
+          !_shouldSheetPhysicsUpdate(_physics, oldPosition.physics)) {
+        return;
+      }
       _effectiveScrollController.detach(oldPosition);
       // It's important that we not dispose the old position until after the
       // viewport has had a chance to unregister its listeners from the old
@@ -462,7 +467,7 @@ class SheetState extends State<SheetScrollable>
       _effectiveScrollController.attach(position);
     }
 
-    if (_shouldUpdatePosition(oldWidget)) _updatePosition();
+    if (_shouldUpdatePosition(oldWidget)) _updatePosition(force: true);
   }
 
   @override

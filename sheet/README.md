@@ -195,7 +195,7 @@ Navigator(
 )
 ```
 
-An example using [GoRouter](https://pub.dev/packages/go_router) is available [here](https://github.com/jamesblasco/modal_bottom_sheet/blob/main/sheet/example/lib/examples/route/navigation/go_router.dart)
+An example using [GoRouter](https://pub.dev/packages/go_router) is available in [`sheet/example/lib/pages/go_router_sheet_page.dart`](example/lib/pages/go_router_sheet_page.dart)
 
 
 
