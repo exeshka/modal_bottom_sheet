@@ -81,11 +81,7 @@ class SheetPrimaryScrollPosition extends ScrollPositionWithSingleContext {
   final SheetContext sheetContext;
   SheetPosition get sheetPosition => sheetContext.position;
 
-  bool sheetShouldSheetAcceptUserOffset(double delta) {
-    // Can drag down if list already on the top
-    final bool canDragForward = delta >= 0 && pixels <= minScrollExtent;
-
-    // Find if SnapSheetPhysics is present in the sheet's physics chain to determine the effective max stop
+  double get _effectiveMaxSheetScrollExtent {
     ScrollPhysics? currentPhysics = sheetPosition.physics;
     double maxStop = 1.0;
     while (currentPhysics != null) {
@@ -95,17 +91,56 @@ class SheetPrimaryScrollPosition extends ScrollPositionWithSingleContext {
       }
       currentPhysics = currentPhysics.parent;
     }
-    final double effectiveMaxScrollExtent = sheetPosition.hasContentDimensions
+    return sheetPosition.hasContentDimensions
         ? maxStop * sheetPosition.maxScrollExtent
         : 0.0;
+  }
+
+  bool sheetShouldSheetAcceptUserOffset(double delta) {
+    // Can drag down if list already on the top
+    final bool canDragForward = delta >= 0 && pixels <= minScrollExtent;
 
     // Can drag up if sheet is not yet on top and list is already on top
     final bool canDragBackwards = delta < 0 &&
-        sheetPosition.pixels < effectiveMaxScrollExtent &&
+        sheetPosition.pixels < _effectiveMaxSheetScrollExtent &&
         pixels <= minScrollExtent;
 
     return sheetPosition.physics.shouldAcceptUserOffset(sheetPosition) &&
         (canDragForward || canDragBackwards);
+  }
+
+  bool sheetShouldAcceptBallisticVelocity(double velocity) {
+    if (!sheetPosition.physics.shouldAcceptUserOffset(sheetPosition)) {
+      return false;
+    }
+
+    final bool canCloseSheet = velocity < 0.0 &&
+        sheetPosition.pixels > sheetPosition.minScrollExtent &&
+        pixels <= minScrollExtent;
+    final bool canOpenSheet = velocity > 0.0 &&
+        sheetPosition.pixels < _effectiveMaxSheetScrollExtent &&
+        pixels <= minScrollExtent;
+
+    return canCloseSheet || canOpenSheet;
+  }
+
+  bool shouldTransferNearTopBallisticVelocity(double velocity) {
+    if (velocity >= 0.0 || pixels <= minScrollExtent) {
+      return false;
+    }
+
+    final double transferExtent = math.min(viewportDimension * 0.2, 120.0);
+    return pixels - minScrollExtent <= transferExtent &&
+        sheetPosition.pixels > sheetPosition.minScrollExtent &&
+        sheetPosition.physics.shouldAcceptUserOffset(sheetPosition);
+  }
+
+  void _goBallisticOnSheet(double velocity) {
+    if (sheetPosition.activity is! _SheetScrollActivity) {
+      sheetPosition.beginActivity(_SheetScrollActivity(sheetPosition));
+    }
+    sheetPosition.goBallistic(velocity);
+    goIdle();
   }
 
   @override
@@ -166,20 +201,19 @@ class SheetPrimaryScrollPosition extends ScrollPositionWithSingleContext {
       }
     }
 
-    ScrollPhysics? currentPhysics = sheetPosition.physics;
-    double maxStop = 1.0;
-    while (currentPhysics != null) {
-      if (currentPhysics is SnapSheetPhysics) {
-        maxStop = currentPhysics.stops.reduce(math.max);
-        break;
-      }
-      currentPhysics = currentPhysics.parent;
+    if (sheetShouldAcceptBallisticVelocity(velocity)) {
+      _goBallisticOnSheet(velocity);
+      return;
     }
-    final double effectiveMaxScrollExtent = sheetPosition.hasContentDimensions
-        ? maxStop * sheetPosition.maxScrollExtent
-        : 0.0;
 
-    if (velocity > 0.0 && sheetPosition.pixels >= effectiveMaxScrollExtent ||
+    if (shouldTransferNearTopBallisticVelocity(velocity)) {
+      correctPixels(minScrollExtent);
+      _goBallisticOnSheet(velocity);
+      return;
+    }
+
+    if (velocity > 0.0 &&
+            sheetPosition.pixels >= _effectiveMaxSheetScrollExtent ||
         (velocity < 0.0 && pixels > 0)) {
       super.goBallistic(velocity);
       return;

@@ -5,6 +5,49 @@ import 'package:sheet/sheet.dart';
 import '../../helpers.dart';
 
 void main() {
+  testWidgets('transfers a near-top downward fling to the sheet',
+      (WidgetTester tester) async {
+    ScrollController? listController;
+
+    await tester.pumpApp(
+      Sheet(
+        resizable: true,
+        initialExtent: 600,
+        maxExtent: 600,
+        physics: const BouncingSheetPhysics(
+          parent: SnapSheetPhysics(stops: <double>[0, 1]),
+        ),
+        child: SheetPrimaryScrollScope(
+          child: Builder(
+            builder: (BuildContext context) {
+              listController = SheetPrimaryScrollScope.controllerOf(context);
+              return ListView.builder(
+                itemCount: 40,
+                itemBuilder: (BuildContext context, int index) {
+                  return SizedBox(
+                    height: 80,
+                    child: Text('Item $index'),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ),
+    );
+
+    (tester.getSheetPosition().context as SheetContext)
+        .initialAnimationFinished = true;
+    listController!.jumpTo(48);
+    await tester.pump();
+
+    (listController!.position as SheetPrimaryScrollPosition).goBallistic(-1600);
+    await tester.pumpAndSettle();
+
+    expect(listController!.offset, 0);
+    expect(tester.getSheetPosition().pixels, lessThan(600));
+  });
+
   testWidgets('keeps a separate primary scroll controller per route',
       (WidgetTester tester) async {
     final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
