@@ -86,7 +86,7 @@ class _GoRouterSheetDemoState extends State<GoRouterSheetDemo> {
             name: 'sheet-fit',
             path: 'sheet-fit',
             pageBuilder: (BuildContext context, GoRouterState state) {
-              return ConfiguredCupertinoSheetPage<void>(
+              return CupertinoSheetPage<void>(
                 key: state.pageKey,
                 fit: SheetFit.loose,
                 child: const SheetFitDemo(),
@@ -97,7 +97,7 @@ class _GoRouterSheetDemoState extends State<GoRouterSheetDemo> {
             name: 'sheet-half',
             path: 'sheet-half',
             pageBuilder: (BuildContext context, GoRouterState state) {
-              return ConfiguredCupertinoSheetPage<void>(
+              return CupertinoSheetPage<void>(
                 key: state.pageKey,
                 initialStop: 0.5,
                 stops: [0, 0.5],
@@ -109,7 +109,7 @@ class _GoRouterSheetDemoState extends State<GoRouterSheetDemo> {
             name: 'sheet-stops',
             path: 'sheet-stops',
             pageBuilder: (BuildContext context, GoRouterState state) {
-              return ConfiguredCupertinoSheetPage<void>(
+              return CupertinoSheetPage<void>(
                 key: state.pageKey,
                 stops: const <double>[0, 0.4, 0.6, 1],
                 initialStop: 0.4,
@@ -153,7 +153,7 @@ class _GoRouterSheetDemoState extends State<GoRouterSheetDemo> {
             navigatorKey: _sheetStopsShellNavigatorKey,
             pageBuilder:
                 (BuildContext context, GoRouterState state, Widget child) {
-              return ConfiguredCupertinoSheetPage<void>(
+              return CupertinoSheetPage<void>(
                 key: state.pageKey,
                 stops: const <double>[0, 0.4, 0.6, 1],
                 initialStop: 0.4,
@@ -217,50 +217,6 @@ class _GoRouterSheetDemoState extends State<GoRouterSheetDemo> {
       },
     );
   }
-}
-
-/// [Page] that builds [CupertinoSheetRoute] with sheet options for go_router.
-class ConfiguredCupertinoSheetPage<T> extends Page<T> {
-  const ConfiguredCupertinoSheetPage({
-    required this.child,
-    this.initialStop = 1,
-    this.stops,
-    this.fit = SheetFit.expand,
-    this.draggable = true,
-    super.key,
-    super.name,
-    super.arguments,
-    super.restorationId,
-  });
-
-  final Widget child;
-  final double initialStop;
-  final List<double>? stops;
-  final SheetFit fit;
-  final bool draggable;
-
-  @override
-  Route<T> createRoute(BuildContext context) {
-    return _PageBasedConfiguredCupertinoSheetRoute<T>(page: this);
-  }
-}
-
-class _PageBasedConfiguredCupertinoSheetRoute<T>
-    extends CupertinoSheetRoute<T> {
-  _PageBasedConfiguredCupertinoSheetRoute({
-    required ConfiguredCupertinoSheetPage<T> page,
-  }) : super(
-          settings: page,
-          builder: (BuildContext context) {
-            return (ModalRoute.of(context)!.settings
-                    as ConfiguredCupertinoSheetPage<T>)
-                .child;
-          },
-          initialStop: page.initialStop,
-          stops: page.stops,
-          fit: page.fit,
-          draggable: page.draggable,
-        );
 }
 
 class Book {

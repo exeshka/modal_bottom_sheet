@@ -282,7 +282,7 @@ class CupertinoSheetBottomRouteTransition extends StatelessWidget {
                         (CupertinoTheme.brightnessOf(context) == Brightness.dark
                                 ? CupertinoColors.inactiveGray
                                 : Colors.black)
-                            .withOpacity(secondaryAnimation.value * 0.1),
+                            .withValues(alpha: secondaryAnimation.value * 0.1),
                         BlendMode.srcOver,
                       ),
                       child: child,
@@ -317,9 +317,15 @@ class CupertinoSheetPage<T> extends Page<T> {
   const CupertinoSheetPage({
     required this.child,
     this.maintainState = true,
+    this.initialStop = 1,
+    this.stops,
+    this.fit = SheetFit.expand,
+    this.draggable = true,
+    this.backgroundColor,
     super.key,
     super.name,
     super.arguments,
+    super.restorationId,
   });
 
   /// The content to be shown in the [Route] created by this page.
@@ -328,19 +334,47 @@ class CupertinoSheetPage<T> extends Page<T> {
   /// {@macro flutter.widgets.modalRoute.maintainState}
   final bool maintainState;
 
+  /// Relative extent up to where the sheet is animated when pushed for
+  /// the first time. Values between 0 (hidden) and 1 (fully shown).
+  final double initialStop;
+
+  /// Possible stops where the sheet can be snapped when dragged.
+  final List<double>? stops;
+
+  /// How to size the builder content in the sheet route.
+  final SheetFit fit;
+
+  /// Defines if the sheet can be translated by user dragging.
+  final bool draggable;
+
+  /// The background color used by the cupertino decoration builder.
+  final Color? backgroundColor;
+
   CupertinoSheetPage<T> copyWith({
     Widget? child,
     bool? maintainState,
+    double? initialStop,
+    List<double>? stops,
+    SheetFit? fit,
+    bool? draggable,
+    Color? backgroundColor,
     LocalKey? key,
     String? name,
     Object? arguments,
+    String? restorationId,
   }) {
     return CupertinoSheetPage<T>(
       child: child ?? this.child,
       maintainState: maintainState ?? this.maintainState,
+      initialStop: initialStop ?? this.initialStop,
+      stops: stops ?? this.stops,
+      fit: fit ?? this.fit,
+      draggable: draggable ?? this.draggable,
+      backgroundColor: backgroundColor ?? this.backgroundColor,
       key: key ?? this.key,
       name: name ?? this.name,
       arguments: arguments ?? this.arguments,
+      restorationId: restorationId ?? this.restorationId,
     );
   }
 
@@ -357,16 +391,18 @@ class CupertinoSheetPage<T> extends Page<T> {
 class _PageBasedCupertinoSheetRoute<T> extends CupertinoSheetRoute<T> {
   _PageBasedCupertinoSheetRoute({
     required CupertinoSheetPage<T> page,
-    super.stops,
-    super.initialStop,
-    super.backgroundColor,
-    super.maintainState,
   }) : super(
           settings: page,
           builder: (BuildContext context) {
             return (ModalRoute.of(context)!.settings as CupertinoSheetPage<T>)
                 .child;
           },
+          initialStop: page.initialStop,
+          stops: page.stops,
+          backgroundColor: page.backgroundColor,
+          maintainState: page.maintainState,
+          fit: page.fit,
+          draggable: page.draggable,
         );
 
   CupertinoSheetPage<T> get _page => settings as CupertinoSheetPage<T>;
