@@ -150,7 +150,6 @@ class _GoRouterSheetDemoState extends State<GoRouterSheetDemo> {
           ),
           ShellRoute(
             parentNavigatorKey: _rootNavigatorKey,
-            navigatorKey: _sheetStopsShellNavigatorKey,
             pageBuilder:
                 (BuildContext context, GoRouterState state, Widget child) {
               return CupertinoSheetPage<void>(

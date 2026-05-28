@@ -126,7 +126,7 @@ class RenderResizableSheetChildBox extends RenderShiftedBox {
       parentUsesSize: true,
     );
 
-    size = constraints.biggest;
+    size = constraints.constrain(Size(child!.size.width, extend));
     childParentData.offset = Offset.zero;
   }
 }

@@ -8,6 +8,21 @@ import '../../../helpers.dart';
 
 void main() {
   group('CupertinoSheetRoute', () {
+    testWidgets('uses a faster reverse transition',
+        (WidgetTester tester) async {
+      await tester.pumpApp(SizedBox());
+      final CupertinoSheetRoute<void> route = CupertinoSheetRoute<void>(
+        builder: (context) => Text('Sheet'),
+      );
+
+      Navigator.of(tester.contextForRootNavigator).push(route);
+      await tester.pump();
+
+      expect(route.transitionDuration, const Duration(milliseconds: 400));
+      expect(route.reverseTransitionDuration,
+          const Duration(microseconds: 235294));
+    });
+
     testWidgets('renders', (WidgetTester tester) async {
       await tester.pumpApp(SizedBox());
 
@@ -47,6 +62,115 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byType(CupertinoSheetBottomRouteTransition), findsOneWidget);
+    });
+
+    testWidgets('stops navigator gesture when dismissed by drag',
+        (WidgetTester tester) async {
+      await tester.pumpApp(SizedBox());
+      final NavigatorState navigator =
+          Navigator.of(tester.contextForRootNavigator);
+
+      navigator.push(
+        CupertinoSheetRoute(builder: (context) => Text('Sheet')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.drag(findSheet(), const Offset(0, 700));
+      await tester.pumpAndSettle();
+
+      expect(navigator.userGestureInProgress, isFalse);
+      expect(find.text('Sheet'), findsNothing);
+    });
+
+    testWidgets('dismisses smoothly when barrier is tapped while opening',
+        (WidgetTester tester) async {
+      await tester.pumpApp(SizedBox());
+      final NavigatorState navigator =
+          Navigator.of(tester.contextForRootNavigator);
+
+      final CupertinoSheetRoute<void> route = CupertinoSheetRoute<void>(
+        initialStop: 0.8,
+        builder: (context) => Text('Sheet'),
+      );
+      navigator.push(route);
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      final double openingValue = route.sheetController.animation.value;
+      expect(openingValue, greaterThan(0));
+      expect(openingValue, lessThan(0.8));
+
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(route.sheetController.animation.value, lessThan(openingValue));
+
+      await tester.pumpAndSettle();
+      expect(find.text('Sheet'), findsNothing);
+    });
+
+    testWidgets('finishes opening before another route is pushed',
+        (WidgetTester tester) async {
+      await tester.pumpApp(SizedBox());
+      final NavigatorState navigator =
+          Navigator.of(tester.contextForRootNavigator);
+
+      final CupertinoSheetRoute<void> firstRoute = CupertinoSheetRoute<void>(
+        initialStop: 0.8,
+        builder: (context) => Text('First sheet'),
+      );
+      navigator.push(firstRoute);
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(firstRoute.animation!.value, lessThan(1));
+      expect(firstRoute.sheetController.animation.value, lessThan(0.8));
+
+      navigator.push(
+        CupertinoSheetRoute<void>(
+          builder: (context) => Text('Second sheet'),
+        ),
+      );
+      await tester.pump();
+
+      expect(firstRoute.animation!.value, 1);
+      expect(firstRoute.sheetController.animation.value, 0.8);
+    });
+
+    testWidgets('scrolls to the end when max stop is below full height',
+        (WidgetTester tester) async {
+      await tester.pumpApp(SizedBox());
+
+      Navigator.of(tester.contextForRootNavigator).push(
+        CupertinoSheetRoute<void>(
+          initialStop: 0.5,
+          stops: const <double>[0, 0.5],
+          builder: (BuildContext context) {
+            return Material(
+              child: ListView.builder(
+                controller: PrimaryScrollController.of(context),
+                itemCount: 100,
+                itemBuilder: (BuildContext context, int index) {
+                  return ListTile(title: Text('Item $index'));
+                },
+              ),
+            );
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      for (var i = 0; i < 8; i += 1) {
+        await tester.fling(
+          find.byType(ListView),
+          const Offset(0, -800),
+          8000,
+        );
+        await tester.pumpAndSettle();
+      }
+
+      expect(find.text('Item 99'), findsOneWidget);
     });
   });
 

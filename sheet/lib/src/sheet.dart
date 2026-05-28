@@ -577,6 +577,7 @@ class SheetViewport extends SingleChildRenderObjectWidget {
       ..clipBehavior = clipBehavior
       ..minExtent = minExtent
       ..maxExtent = maxExtent
+      ..resizeable = resizeable
       ..fit = fit;
   }
 }
@@ -657,6 +658,12 @@ class RenderSheetViewport extends RenderBox
   }
 
   void _hasDragged() {
+    if (resizeable) {
+      markNeedsLayout();
+      markNeedsPaint();
+      markNeedsSemanticsUpdate();
+      return;
+    }
     if (!_isOverflow && offset.pixels > child!.size.height) {
       _childExtentBeforeOverflow ??= child!.size.height;
       _isOverflow = true;
@@ -736,6 +743,11 @@ class RenderSheetViewport extends RenderBox
   double get _maxScrollExtent {
     assert(hasSize);
     if (_childExtentBeforeOverflow != null) return _childExtentBeforeOverflow!;
+    if (resizeable) {
+      return (maxExtent ?? _viewportExtent)
+          .clamp(_minScrollExtent, _viewportExtent)
+          .toDouble();
+    }
     if (child == null) return 0.0;
     switch (axis) {
       case Axis.horizontal:
@@ -889,7 +901,7 @@ class RenderSheetViewport extends RenderBox
   @override
   void applyPaintTransform(RenderBox child, Matrix4 transform) {
     final Offset paintOffset = _paintOffset;
-    transform.translate(paintOffset.dx, paintOffset.dy);
+    transform.translateByDouble(paintOffset.dx, paintOffset.dy, 0, 1);
   }
 
   @override

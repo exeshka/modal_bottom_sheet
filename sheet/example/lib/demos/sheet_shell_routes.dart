@@ -12,30 +12,31 @@ class SheetShellListPage extends StatelessWidget {
     final String location = GoRouterState.of(context).uri.toString();
     final String basePrefix = location.split('/detail').first;
 
-    return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: const Text('Sheet · ShellRoute'),
-        leading: CupertinoNavigationBarBackButton(
-          onPressed: () => context.go('/'),
+    return SheetPrimaryScrollScope(
+      child: CupertinoPageScaffold(
+        navigationBar: CupertinoNavigationBar(
+          middle: const Text('Sheet · ShellRoute'),
+          leading: CupertinoNavigationBarBackButton(
+            onPressed: () => context.go('/'),
+          ),
         ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: ListView(
-          controller: SheetPrimaryScrollScope.controllerOf(context),
-          children: <Widget>[
-            _LocationBanner(location: location),
-            for (int i = 0; i < 20; i++)
-              CupertinoListTile(
-                title: Text('Detail $i'),
-                subtitle: Text("context.go('$basePrefix/detail/$i')"),
-                trailing: const CupertinoListTileChevron(),
-                onTap: () => {
-                  print(" context.go('$basePrefix/detail/$i')"),
-                  context.go('$basePrefix/detail/$i')
-                },
-              ),
-          ],
+        child: SafeArea(
+          bottom: false,
+          child: ListView(
+            children: <Widget>[
+              _LocationBanner(location: location),
+              for (int i = 0; i < 20; i++)
+                CupertinoListTile(
+                  title: Text('Detail $i'),
+                  subtitle: Text("context.go('$basePrefix/detail/$i')"),
+                  trailing: const CupertinoListTileChevron(),
+                  onTap: () => {
+                    print(" context.go('$basePrefix/detail/$i')"),
+                    context.go('$basePrefix/detail/$i')
+                  },
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -53,30 +54,31 @@ class SheetShellDetailPage extends StatelessWidget {
     final String location = GoRouterState.of(context).uri.toString();
     final String basePrefix = location.split('/detail').first;
 
-    return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: Text('Detail $id'),
-        leading: CupertinoNavigationBarBackButton(
-          onPressed: () => context.pop(),
+    return SheetPrimaryScrollScope(
+      child: CupertinoPageScaffold(
+        navigationBar: CupertinoNavigationBar(
+          middle: Text('Detail $id'),
+          leading: CupertinoNavigationBarBackButton(
+            onPressed: () => context.pop(),
+          ),
         ),
-      ),
-      child: SafeArea(
-        child: ListView(
-          controller: SheetPrimaryScrollScope.controllerOf(context),
-          children: <Widget>[
-            _LocationBanner(location: location),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Same GoRouter, same ShellRoute.\n'
-                'Only the inner navigator stack changes.',
+        child: SafeArea(
+          child: ListView(
+            children: <Widget>[
+              _LocationBanner(location: location),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Same GoRouter, same ShellRoute.\n'
+                  'Only the inner navigator stack changes.',
+                ),
               ),
-            ),
-            CupertinoButton.filled(
-              onPressed: () => context.go('$basePrefix/detail/${id}_next'),
-              child: Text("go → $basePrefix/detail/${id}_next"),
-            ),
-          ],
+              CupertinoButton.filled(
+                onPressed: () => context.go('$basePrefix/detail/${id}_next'),
+                child: Text("go → $basePrefix/detail/${id}_next"),
+              ),
+            ],
+          ),
         ),
       ),
     );

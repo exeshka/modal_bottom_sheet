@@ -6,21 +6,28 @@ class SheetScrollDemo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: CupertinoColors.systemBackground.resolveFrom(context),
-      child: CupertinoPageScaffold(
-        navigationBar: const CupertinoNavigationBar(
-          middle: Text('Scrollable sheet'),
-        ),
-        child: SafeArea(
-          bottom: false,
-          child: ListView.builder(
-            controller: PrimaryScrollController.of(context),
-            itemCount: 100,
-            itemBuilder: (context, index) {
-              return ListTile(title: Text('Item $index'));
-            },
-          ),
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: CupertinoNavigationBar(
+        transitionBetweenRoutes: false,
+        leading: null,
+        border: null,
+        automaticBackgroundVisibility: false,
+        automaticallyImplyLeading: false,
+        middle: Text('Sheet Scroll Demo'),
+      ),
+
+      // appBar: AppBar(
+      //   title: Text('Sheet Scroll Demo'),
+      // ),
+      body: SafeArea(
+        bottom: false,
+        child: ListView.builder(
+          controller: PrimaryScrollController.of(context),
+          itemCount: 100,
+          itemBuilder: (context, index) {
+            return ListTile(title: Text('Item $index'));
+          },
         ),
       ),
     );

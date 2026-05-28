@@ -13,7 +13,15 @@ import 'package:sheet/sheet.dart';
 // TODO(jaime): Arbitrary values, keep them or make SheetRoute abstract
 const double _kWillPopThreshold = 0.8;
 const Duration _kSheetTransitionDuration = Duration(milliseconds: 400);
+const double _kSheetReverseTransitionSpeedFactor = 1.7;
 const Color _kBarrierColor = Color(0x59000000);
+
+Duration _reverseTransitionDurationFor(Duration duration) {
+  return Duration(
+    microseconds:
+        (duration.inMicroseconds / _kSheetReverseTransitionSpeedFactor).round(),
+  );
+}
 
 /// A modal route that overlays a widget over the current route and animates
 /// it from the bottom
@@ -95,6 +103,10 @@ class SheetRoute<T> extends PageRoute<T> with DelegatedTransitionsRoute<T> {
   @override
   final Duration transitionDuration;
 
+  @override
+  Duration get reverseTransitionDuration =>
+      _reverseTransitionDurationFor(transitionDuration);
+
   /// The semantic label used for a sheet modal route.
   final String? sheetLabel;
 
@@ -135,6 +147,7 @@ class SheetRoute<T> extends PageRoute<T> with DelegatedTransitionsRoute<T> {
     _routeAnimationController = AnimationController(
       vsync: navigator!,
       duration: transitionDuration,
+      reverseDuration: reverseTransitionDuration,
     );
     return _routeAnimationController!;
   }
@@ -146,14 +159,42 @@ class SheetRoute<T> extends PageRoute<T> with DelegatedTransitionsRoute<T> {
   }
 
   @override
+  void didChangeNext(Route<dynamic>? nextRoute) {
+    if (nextRoute != null) {
+      _completeInitialTransition();
+    }
+    super.didChangeNext(nextRoute);
+  }
+
+  void _completeInitialTransition() {
+    final AnimationController? routeController = _routeAnimationController;
+    if (routeController == null ||
+        routeController.isCompleted ||
+        routeController.status != AnimationStatus.forward) {
+      return;
+    }
+
+    routeController.value = 1;
+    if (!_sheetController.hasClients) {
+      return;
+    }
+
+    _sheetController.relativeJumpTo(initialExtent.clamp(0, 1));
+    (_sheetController.position.context as SheetContext)
+        .initialAnimationFinished = true;
+  }
+
+  @override
   Widget buildPage(BuildContext context, Animation<double> animation,
       Animation<double> secondaryAnimation) {
     return _SheetRouteContainer(sheetRoute: this);
   }
 
   @override
-  bool canTransitionTo(TransitionRoute<dynamic> nextRoute) =>
-      nextRoute is SheetRoute;
+  bool canTransitionTo(TransitionRoute<dynamic> nextRoute) {
+    _completeInitialTransition();
+    return nextRoute is SheetRoute;
+  }
 
   @override
   bool canTransitionFrom(TransitionRoute<dynamic> previousRoute) =>
@@ -176,6 +217,15 @@ class SheetRoute<T> extends PageRoute<T> with DelegatedTransitionsRoute<T> {
   Widget buildSecondaryTransitionForPreviousRoute(BuildContext context,
       Animation<double> secondaryAnimation, Widget child) {
     return child;
+  }
+
+  @protected
+  bool get shouldResizeChild {
+    final List<double>? stops = this.stops;
+    if (stops == null || stops.isEmpty) {
+      return false;
+    }
+    return stops.reduce((double a, double b) => a > b ? a : b) < 1;
   }
 
   /// Returns true if the controller should prevent popping for a given extent
@@ -201,6 +251,7 @@ class SheetRoute<T> extends PageRoute<T> with DelegatedTransitionsRoute<T> {
       fit: fit,
       physics: effectivePhysics,
       controller: sheetController,
+      resizable: shouldResizeChild,
       child: child,
     );
   }
@@ -371,7 +422,8 @@ class __SheetRouteContainerState extends State<_SheetRouteContainer>
       widget.sheetRoute._routeAnimationController!;
 
   bool _userGestureInProgress = false;
-  bool _isDisposed = false;
+  double? _reverseRouteStartValue;
+  double? _reverseSheetStartValue;
 
   bool get _isFullyDismissed {
     if (!_sheetController.hasClients) {
@@ -403,15 +455,8 @@ class __SheetRouteContainerState extends State<_SheetRouteContainer>
       return;
     }
     _userGestureInProgress = false;
-    if (!_isDisposed) {
-      navigator.userGestureInProgressNotifier.value = false;
-      navigator.didStopUserGesture();
-    } else {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        navigator.userGestureInProgressNotifier.value = false;
-        navigator.didStopUserGesture();
-      });
-    }
+    navigator.userGestureInProgressNotifier.value = false;
+    navigator.didStopUserGesture();
   }
 
   void _onSheetIsScrollingChanged() {
@@ -429,9 +474,7 @@ class __SheetRouteContainerState extends State<_SheetRouteContainer>
     final bool isScrolling =
         _sheetController.position.isScrollingNotifier.value;
     if (!isScrolling) {
-      if (!_isFullyDismissed) {
-        _stopUserGesture();
-      }
+      _stopUserGesture();
       return;
     }
 
@@ -468,7 +511,6 @@ class __SheetRouteContainerState extends State<_SheetRouteContainer>
 
   @override
   void dispose() {
-    _isDisposed = true;
     _routeController.removeListener(onRouteAnimationUpdate);
     _sheetController.removeListener(onSheetExtentUpdate);
     if (_sheetController.hasClients) {
@@ -513,7 +555,7 @@ class __SheetRouteContainerState extends State<_SheetRouteContainer>
         );
         _routeController.value = animationValue;
         if (_sheetController.animation.value == 0) {
-          _startUserGesture();
+          _stopUserGesture();
           _routeController.value = 0.001;
           _routeController.animateBack(0);
           route.navigator?.pop();
@@ -528,30 +570,61 @@ class __SheetRouteContainerState extends State<_SheetRouteContainer>
       _firstAnimation = false;
     }
     if (!_routeController.isAnimating) {
+      _resetReverseTransition();
       return;
     }
     // widget.sheetRoute.navigator!.userGestureInProgressNotifier.value = false;
 
-    if (!_firstAnimation &&
-        _routeController.value != _sheetController.animation.value) {
-      if (_routeController.status == AnimationStatus.forward) {
-        final double animationValue = _routeController.value.mapDistance(
-          fromLow: 0,
-          fromHigh: 1,
-          toLow: _sheetController.animation.value,
-          toHigh: 1,
-        );
-        _sheetController.relativeJumpTo(animationValue);
-      } else {
-        final double animationValue = _routeController.value.mapDistance(
-          fromLow: 0,
-          fromHigh: 1,
-          toLow: 0,
-          toHigh: _sheetController.animation.value,
-        );
+    if (!_sheetController.hasClients) {
+      return;
+    }
+
+    if (_routeController.status == AnimationStatus.reverse) {
+      final double? animationValue = _reverseAnimationValue();
+      if (animationValue != null) {
         _sheetController.relativeJumpTo(animationValue);
       }
+      return;
     }
+
+    _resetReverseTransition();
+
+    if (!_firstAnimation &&
+        _routeController.value != _sheetController.animation.value &&
+        _routeController.status == AnimationStatus.forward) {
+      final double animationValue = _routeController.value.mapDistance(
+        fromLow: 0,
+        fromHigh: 1,
+        toLow: _sheetController.animation.value,
+        toHigh: 1,
+      );
+      _sheetController.relativeJumpTo(animationValue);
+    }
+  }
+
+  double? _reverseAnimationValue() {
+    final double routeStartValue =
+        _reverseRouteStartValue ??= _routeController.value;
+    final double sheetStartValue =
+        _reverseSheetStartValue ??= _sheetController.animation.value;
+
+    if (routeStartValue <= 0) {
+      return 0;
+    }
+
+    return _routeController.value
+        .mapDistance(
+          fromLow: 0,
+          fromHigh: routeStartValue,
+          toLow: 0,
+          toHigh: sheetStartValue,
+        )
+        .clamp(0.0, 1.0);
+  }
+
+  void _resetReverseTransition() {
+    _reverseRouteStartValue = null;
+    _reverseSheetStartValue = null;
   }
 
   /// Stop current sheet transition and call willPop to confirm/cancel the pop
@@ -572,7 +645,7 @@ class __SheetRouteContainerState extends State<_SheetRouteContainer>
           if (disposition == RoutePopDisposition.pop) {
             _sheetController.relativeAnimateTo(
               0,
-              duration: const Duration(milliseconds: 400),
+              duration: route.reverseTransitionDuration,
               curve: Curves.easeInOut,
             );
           } else {

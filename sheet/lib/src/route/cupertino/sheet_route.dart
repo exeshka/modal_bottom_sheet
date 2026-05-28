@@ -65,12 +65,14 @@ class _CupertinoSheetDecorationBuilder extends StatelessWidget {
       data: CupertinoUserInterfaceLevelData.elevated,
       child: Builder(
         builder: (BuildContext context) {
+          final Color resolvedBackgroundColor = backgroundColor ??
+              CupertinoColors.systemBackground.resolveFrom(context);
+
           return Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.vertical(top: topRadius),
-              // color: backgroundColor ??
-              //     CupertinoColors.systemBackground.resolveFrom(context),
+              color: resolvedBackgroundColor,
             ),
             child: MediaQuery.removePadding(
               context: context,
@@ -147,6 +149,7 @@ class CupertinoSheetRoute<T> extends SheetRoute<T> {
       maxExtent: mediaQuery.size.height - topMargin,
       physics: effectivePhysics,
       controller: sheetController,
+      resizable: shouldResizeChild,
       child: child,
     );
   }
@@ -276,6 +279,7 @@ class CupertinoSheetBottomRouteTransition extends StatelessWidget {
                   scale: scale,
                   alignment: Alignment.topCenter,
                   child: ClipRRect(
+                    clipBehavior: Clip.antiAlias,
                     borderRadius: BorderRadius.vertical(top: radius),
                     child: ColorFiltered(
                       colorFilter: ColorFilter.mode(

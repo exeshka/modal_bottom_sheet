@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sheet/sheet.dart';
+import 'package:sheet/src/widgets/resizable_sheet.dart';
 
 import '../../../helpers.dart';
 import '../../../screen_size_test.dart';
@@ -56,6 +57,31 @@ void main() {
 
       expect(tester.getSheetHeight(), equals(200));
       expect(tester.getSheetTop(), equals(kScreenRect.bottom - 200));
+    });
+
+    testWidgets('does not enter overflow layout when extent changes',
+        (WidgetTester tester) async {
+      final SheetController controller = SheetController();
+      await tester.pumpApp(
+        Sheet(
+          controller: controller,
+          resizable: true,
+          initialExtent: 200,
+          child: Container(),
+        ),
+      );
+
+      expect(tester.getSheetHeight(), equals(200));
+
+      controller.jumpTo(260);
+      await tester.pump();
+
+      expect(tester.getSheetHeight(), equals(260));
+      expect(
+        tester.getSize(find.byType(ResizableSheetChild)).height,
+        equals(260),
+      );
+      expect(tester.getSheetTop(), equals(kScreenRect.bottom - 260));
     });
 
     testWidgets(
